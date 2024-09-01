@@ -1,8 +1,6 @@
 package app
 
-import (
-	"github.com/core-go/log"
-)
+import "github.com/core-go/log/zap"
 
 type Config struct {
 	Credentials string     `mapstructure:"credentials"`

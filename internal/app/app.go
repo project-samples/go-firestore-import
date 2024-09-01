@@ -10,10 +10,9 @@ import (
 
 	w "github.com/core-go/firestore/batch"
 	im "github.com/core-go/io/importer"
-	"github.com/core-go/io/reader"
-	"github.com/core-go/io/transform"
+	rd "github.com/core-go/io/reader"
 	v "github.com/core-go/io/validator"
-	"github.com/core-go/log"
+	"github.com/core-go/log/zap"
 )
 
 type ApplicationContext struct {
@@ -32,9 +31,9 @@ func NewApp(ctx context.Context, cfg Config) (*ApplicationContext, error) {
 		return nil, err
 	}
 
-	fileType := reader.DelimiterType
+	fileType := rd.DelimiterType
 	filename := ""
-	if fileType == reader.DelimiterType {
+	if fileType == rd.DelimiterType {
 		filename = "delimiter.csv"
 	} else {
 		filename = "fixedlength.csv"
@@ -43,7 +42,7 @@ func NewApp(ctx context.Context, cfg Config) (*ApplicationContext, error) {
 		fullPath := filepath.Join("data", filename)
 		return fullPath
 	}
-	reader, err := reader.NewDelimiterFileReader(generateFileName)
+	reader, err := rd.NewFileReader(generateFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +50,7 @@ func NewApp(ctx context.Context, cfg Config) (*ApplicationContext, error) {
 		"app": "import users",
 		"env": "dev",
 	}
-	transformer, err := transform.NewDelimiterTransformer[User](",")
+	transformer, err := rd.NewDelimiterTransformer[User](",")
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,7 @@ func NewApp(ctx context.Context, cfg Config) (*ApplicationContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	errorHandler := im.NewErrorHandler[*User](log.ErrorFields, "fileName", "lineNo", mp)
+	errorHandler := im.NewErrorHandler[*User, string](log.ErrorFields, "fileName", "lineNo", mp)
 	writer := w.NewStreamWriter[*User](client, "userimport", 6)
 	importer := im.NewImporter[User](reader.Read, transformer.Transform, validator.Validate, errorHandler.HandleError, errorHandler.HandleException, filename, writer.Write, writer.Flush)
 	return &ApplicationContext{Import: importer.Import}, nil
